@@ -420,8 +420,6 @@ user@4F-89:~/codyssey/workstation$ docker logs web-8080
 - 호스트 포트만 다르게 하면 같은 이미지를 여러 개 켤 수 있다 
 - 로그: wget(30초마다) = 헬스 체크 / curl = 터미널 접속 / Edg - 브라브라우저 접속 / favicon 404 = 탭 아이콘 없음(괜찮음)
 
-참고: Docker Desktop 화면
-![Docker Desktop](images/docker-desktop.png)
 
 ## 8. 바인드 마운트 
 
