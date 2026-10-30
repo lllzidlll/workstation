@@ -771,6 +771,8 @@ To github.com:lllzidlll/workstation.git
 - **확인**: GitHub SSH keys 목록에 새 키가 없음
 - **해결**: `New SSH key`로 등록 → `Hi lllzidlll!` 성공
 
+
+
 ### 12-6. 오타 모음
 | 입력 | 에러 | 원인 | 수정 |
 |---|---|---|---|
@@ -781,6 +783,58 @@ To github.com:lllzidlll/workstation.git
 | `exec vol-test` | `No such container` | 컨테이너 안 만듦 | `run` 먼저 |
 | `docker compse` | `unknown flag` | compose 오타 | `docker compose` |
 | `wget -q0-` | `unrecognized option: 0` | 숫자 0 / 대문자 O 혼동 | `-qO-` |
+
+### 12-7. 포트 충돌
+- **문제**: 이미 8080을 쓰는 컨테이너가 있는데 같은 8080으로 하나 더 실행 → `port is already allocated`
+- **원인 가설**: 호스트의 8080번 포트를 다른 컨테이너가 이미 쓰고 있다
+- **확인**: `docker ps --filter "publish=8080"`으로 web-8080이 사용 중인 것 확인, `ss`로 8080이 LISTEN 상태인 것 확인
+- **해결**: 실패해서 남은 컨테이너(`Created`)를 지우고, 비어 있는 8083으로 다시 실행
+
+**1. 일부러 같은 포트로 실행 → 충돌**
+```bash
+user@4F-89:~/codyssey/workstation$ docker run -d -p 8080:80 --name web-conflict my-web:1.0
+490b4f3b3eba7cd75f454d9a1ac5a2b019e106b7a688abe94bbeca2ebcdfefeb
+docker: Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint web-conflict (45db0611c8974e956a71e2d170bb64ab841b102310aca0851c081d350f5e6764): Bind for 0.0.0.0:8080 failed: port is already allocated
+```
+
+**2. 누가 8080을 쓰는지 진단**
+```bash
+user@4F-89:~/codyssey/workstation$ docker ps --filter "publish=8080"
+CONTAINER ID   IMAGE        COMMAND                  CREATED       STATUS                 PORTS                                     NAMES
+305ec3c9dcff   my-web:1.0   "/docker-entrypoint.…"   8 hours ago   Up 8 hours (healthy)   0.0.0.0:8080->80/tcp, [::]:8080->80/tcp   web-8080
+user@4F-89:~/codyssey/workstation$ ss -tlnp | grep 8080
+LISTEN 0      4096                *:8080             *:*
+user@4F-89:~/codyssey/workstation$ docker ps -a --filter "name=web-conflict"
+CONTAINER ID   IMAGE        COMMAND                  CREATED          STATUS    PORTS     NAMES
+490b4f3b3eba   my-web:1.0   "/docker-entrypoint.…"   34 seconds ago   Created             web-conflict
+```
+
+**3. 해결: 남은 컨테이너 삭제 → 다른 포트(8083)로 실행 → 정리**
+```bash
+user@4F-89:~/codyssey/workstation$ docker rm web-conflict
+web-conflict
+user@4F-89:~/codyssey/workstation$ docker run -d -p 8083:80 --name web-conflict my-web:1.0
+b171e5d4be1302cccf2da2a13def5d1d401aeef9c3a52353a45361f1ff93cece
+user@4F-89:~/codyssey/workstation$ curl http://localhost:8083
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>My Workstation</title></head>
+<body>
+  <h1>My Dev Workstation</h1>
+  <p>Hello from my custom Docker image!</p>
+</body>
+</html>
+user@4F-89:~/codyssey/workstation$ docker rm -f web-conflict
+web-conflict
+```
+
+**포트 충돌 진단 순서**
+1. 에러 메시지에서 충돌한 포트 확인 (`Bind for 0.0.0.0:8080 failed`)
+2. `docker ps --filter "publish=포트"` → 그 포트를 쓰는 컨테이너 찾기
+3. `ss -tlnp | grep 포트` → 포트가 LISTEN(사용 중)인지 확인 (Docker가 잡은 포트는 프로세스 이름이 안 보일 수 있어서 2번이 더 정확함. Windows는 PowerShell에서 `netstat -ano | findstr :포트`)
+4. 해결: 다른 호스트 포트 사용 / 기존 컨테이너 `docker stop` / 실패해서 남은 컨테이너 `docker rm`
+
+- `Created` = 컨테이너는 만들어졌지만 포트 연결 실패로 실행되지 않은 상태. 같은 이름으로 다시 만들려면 먼저 지워야 한다
 
 ## 13. 개념 정리
 
