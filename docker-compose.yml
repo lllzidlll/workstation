@@ -1,0 +1,10 @@
+services:
+  web:
+    build: .
+    ports:
+      - "${WEB_PORT:-8090}:80"
+    environment:
+      - APP_ENV=${APP_ENV:-dev}
+  helper:
+    image: alpine
+    command: sleep infinity
