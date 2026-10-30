@@ -445,6 +445,7 @@ user@4F-89:~/codyssey/workstation$ ls site-bind
 index.html
 user@4F-89:~/codyssey/workstation$ docker run -d -p 8082:80 --name web-bind -v $(pwd)/site-bind:/usr/share/nginx/html my-web:1.0
 cf56344e58f8a64d05fb964c4b69128ee2c2c4846a663ec5e0b011dcfdf17b8c
+```
 
 **3. 변경 전**
 ```bash
